@@ -17,9 +17,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,21 +43,27 @@ public class AuthenticationController {
     private final static String BAD_CREDENTIALS = "Bad credentials, check the emails and/or the password";
 
     @PostMapping(path = "/login")
-    public ResponseEntity<?> createAthenticationToken(@RequestBody AuthenticationRequest authenticationRequest) {
+    public ResponseEntity<?> createAthenticationToken(@RequestBody @Valid AuthenticationRequest authenticationRequest, BindingResult bindingResult) {
         ResponseEntity<?> responseEntity;
-        try {
-            // En el userService se verifica que no se esté solicitando un usuario registrado.
-            final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getUsername());
-            // Y en el AuthenticationManager que las credenciales sean correctas.
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(), authenticationRequest.getPassword()));
-            // Si está ok se le asigna un JWT al user.
-            final String jwt = jwtUtil.generateToken(userDetails);
-            // Y se retorna.
-            responseEntity = ResponseEntity.ok(new AuthenticationResponse(jwt));
-        } catch (UsernameNotFoundException e) {
-            responseEntity = ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            responseEntity = ResponseEntity.status(HttpStatus.FORBIDDEN).body(BAD_CREDENTIALS);
+        if (bindingResult.hasErrors()) { // Se revisa si no hay errores del @Valid.
+            responseEntity = BindingResultsErrors.getResponseEntityWithErrors(bindingResult); // Se mandan a traer un ResponseEntity que contenga los errores.
+        }
+        // Si no hay errores entonces:
+        else {
+            try {
+                // En el userService se verifica que no se esté solicitando un usuario registrado.
+                final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getUsername());
+                // Y en el AuthenticationManager que las credenciales sean correctas.
+                authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(), authenticationRequest.getPassword()));
+                // Si está ok se le asigna un JWT al user.
+                final String jwt = jwtUtil.generateToken(userDetails);
+                // Y se retorna.
+                responseEntity = ResponseEntity.ok(new AuthenticationResponse(jwt));
+            } catch (UsernameNotFoundException e) {
+                responseEntity = ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            } catch (Exception e) {
+                responseEntity = ResponseEntity.status(HttpStatus.FORBIDDEN).body(BAD_CREDENTIALS);
+            }
         }
         return responseEntity;
     }
@@ -84,11 +90,11 @@ public class AuthenticationController {
                 // Creamos la authentication request para poder logearnos en el sistema.
                 var authRequest = new AuthenticationRequest(user.getEmail(),password);
                 // Iniciamos sesion para recibir el JWT y devolverlo.
-                response = createAthenticationToken(authRequest);
+                response = createAthenticationToken(authRequest,bindingResult);
             } catch (NotValidEmailFormat ese) {
                 response = ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ese.getMessage());
             } catch (Exception e) {
-                response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+                response = ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
             }
 
         }
