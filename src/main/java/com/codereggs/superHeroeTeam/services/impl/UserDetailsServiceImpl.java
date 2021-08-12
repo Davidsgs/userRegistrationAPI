@@ -2,6 +2,7 @@ package com.codereggs.superHeroeTeam.services.impl;
 
 import com.codereggs.superHeroeTeam.models.User;
 import com.codereggs.superHeroeTeam.models.impl.UserDetailsImpl;
+import com.codereggs.superHeroeTeam.repositories.UserRepository;
 import com.codereggs.superHeroeTeam.services.UserService;
 import com.codereggs.superHeroeTeam.services.exceptions.NotValidEmailFormat;
 import com.codereggs.superHeroeTeam.services.exceptions.UserAlreadyExistsException;

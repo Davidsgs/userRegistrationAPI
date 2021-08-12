@@ -12,7 +12,7 @@ import org.springframework.data.mongodb.core.mapping.FieldType;
 import javax.validation.constraints.NotBlank;
 
 @Data
-@Document(collation = "users")
+@Document(collection= "users")
 @Accessors(chain = true)
 public class User {
 
